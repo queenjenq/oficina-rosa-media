@@ -72,14 +72,14 @@ def centered_lines(im, lines, y0, size=104, gap=22):
     for text, color, emos in lines:
         tw = d.textlength(text, font=f)
         esz = int(size * 0.95)
-        total = tw + (len(emos) * (esz + 12) + (14 if emos else 0))
+        eims = [emoji_img(e, esz) for e in emos]
+        total = tw + sum(ei.width + 12 for ei in eims) + (14 if emos else 0)
         x = (W - total) / 2
         d.text((x, y), text, font=f, fill=color)
         ex = x + tw + 14
-        for e in emos:
-            ei = emoji_img(e, esz)
-            im.alpha_composite(ei, (int(ex), int(y + size * 0.22)))
-            ex += esz + 12
+        for ei in eims:
+            im.alpha_composite(ei, (int(ex), int(y + size * 0.22 + (esz - ei.height) / 2)))
+            ex += ei.width + 12
         y += size + gap + 20
     return y
 
