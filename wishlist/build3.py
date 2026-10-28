@@ -60,18 +60,56 @@ def block_calendar(im, cx, base_y):
     d.ellipse([bx - 16 * S, by - 16 * S, bx + 16 * S, by + 16 * S], fill=(200, 20, 100))
 
 
+def _one_slipper(mirror=False, bow=False):
+    """Top-down slide slipper drawn on its own layer: footprint sole, thick rim, fluffy X bands."""
+    from PIL import Image
+    import math
+    w, h = 300 * S, 640 * S
+    L = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(L)
+    def sole(dd, dy, col):
+        dd.ellipse([20 * S, 10 * S + dy, w - 20 * S, 380 * S + dy], fill=col)          # toe area
+        dd.ellipse([50 * S, 300 * S + dy, w - 50 * S, h - 20 * S + dy], fill=col)       # heel
+        dd.rectangle([50 * S, 200 * S + dy, w - 50 * S, 480 * S + dy], fill=col)
+    sole(d, 14 * S, (214, 104, 146))          # rim / thickness
+    sole(d, 0, (255, 226, 236))               # footbed
+    d.ellipse([70 * S, 60 * S, w - 70 * S, 300 * S], fill=(250, 208, 224))   # toe print
+    # fluffy cross bands
+    fur = [(250, 170, 202), (255, 196, 220), (244, 150, 186), (255, 214, 230)]
+    for (x1, y1, x2, y2) in [(10, 120, w // S - 10, 330), (w // S - 10, 120, 10, 330)]:
+        steps = 26
+        for k in range(steps + 1):
+            t = k / steps
+            x = (x1 + (x2 - x1) * t) * S
+            y = (y1 + (y2 - y1) * t) * S
+            r = (54 + 8 * math.sin(k * 1.7)) * S
+            d.ellipse([x - r, y - r * 0.8, x + r, y + r * 0.8], fill=fur[k % 4])
+        for k in range(0, steps + 1, 3):
+            t = k / steps
+            x = (x1 + (x2 - x1) * t) * S
+            y = (y1 + (y2 - y1) * t) * S
+            d.ellipse([x - 14 * S, y - 22 * S, x + 6 * S, y - 6 * S], fill=(255, 236, 244))
+    if bow:
+        bx, by = w // 2, 225 * S
+        c, c2 = (226, 30, 120), (196, 18, 100)
+        d.polygon([(bx, by), (bx - 70 * S, by - 42 * S), (bx - 62 * S, by + 40 * S)], fill=c)
+        d.polygon([(bx, by), (bx + 70 * S, by - 42 * S), (bx + 62 * S, by + 40 * S)], fill=c)
+        d.polygon([(bx - 8 * S, by + 10 * S), (bx - 34 * S, by + 80 * S), (bx - 14 * S, by + 82 * S)], fill=c2)
+        d.polygon([(bx + 8 * S, by + 10 * S), (bx + 34 * S, by + 80 * S), (bx + 14 * S, by + 82 * S)], fill=c2)
+        d.ellipse([bx - 18 * S, by - 18 * S, bx + 18 * S, by + 18 * S], fill=c2)
+    if mirror:
+        L = L.transpose(Image.FLIP_LEFT_RIGHT)
+    # gentle perspective: squash height so they sit on the desk
+    return L.resize((w, int(h * 0.62)), Image.LANCZOS)
+
+
 def slippers(im, cx, base_y):
-    d = ImageDraw.Draw(im)
-    for i, dx in enumerate([-170, 170]):
-        sx = cx + dx * S - 40 * S
-        B.shadow(im, [sx - 130 * S, base_y - 30 * S, sx + 130 * S, base_y + 30 * S], 20)
-        # sole
-        d.ellipse([sx - 120 * S, base_y - 80 * S, sx + 120 * S, base_y + 6 * S], fill=(236, 120, 160))
-        # fuzzy cross bands: cluster of circles
-        for j in range(16):
-            ox = -100 + (j % 8) * 28
-            oy = -150 + (j // 8) * 46
-            d.ellipse([sx + ox * S - 34 * S, base_y + oy * S - 34 * S, sx + ox * S + 34 * S, base_y + oy * S + 34 * S], fill=(250, 186, 210) if (j % 3) else (255, 210, 228))
+    for dx, mirror, rot, bow in [(-160, False, 8, False), (170, True, -6, False)]:
+        L = _one_slipper(mirror, bow).rotate(rot, expand=True, resample=3)
+        x = cx + dx * S - L.width // 2 - 30 * S
+        y = base_y - L.height + 20 * S
+        B.shadow(im, [x + 20 * S, base_y - 60 * S, x + L.width - 20 * S, base_y + 30 * S], 20)
+        im.alpha_composite(L, (int(x), int(y)))
 
 
 def phone_stand(im, cx, base_y):
